@@ -2,6 +2,7 @@
 <head>
 	<title>Table Tracker</title>
 	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 	<script>
 		$(document).ready(function() {
 			var startTime = new Date();
@@ -27,22 +28,79 @@
 			});
 
 			// When a Finish button is clicked
-			$('table').on('click', '.delete', function() {
-				var row = $(this).closest('tr');
-				var hours = parseFloat(row.find('td:eq(1)').text());
-				var total = parseFloat(row.find('td:eq(2)').text().substr(1));
-				activeOrderCount--;
-				row.remove();
-			});
+$('table').on('click', '.delete', function() {
+    var row = $(this).closest('tr');
+    var ordernumber = row.find('td:eq(0)').text();
+    var hours = parseFloat(row.find('td:eq(1)').text());
+    var total = parseFloat(row.find('td:eq(2)').text().substr(1));
+    activeOrderCount--;
+    row.remove();
+    
+    // Generate receipt
+    var receipt = 'Order Number: ' + ordernumber + '\n';
+    receipt += 'Hours: ' + hours + '\n';
+    receipt += 'Total: $' + total.toFixed(2) + '\n';
+    receipt += '--------------------------\n';
 
-			// When the Clear Table button is clicked
-			$('#clear').on('click', function() {
-				$('table tbody').empty();
-				activeOrderCount = 0;
-				totalHours = 0;
-				startTime = new Date();
-				
-			});
+
+   
+    // Open pop-up window with receipt content
+    var receiptWindow = window.open('', '_blank', 'width=400,height=300');
+    receiptWindow.document.open();
+    receiptWindow.document.write('<pre>' + receipt + '</pre>');
+    receiptWindow.document.write('<button id="save-button">Save</button>');
+    receiptWindow.document.close();
+
+    // Save receipt as text file when Save button is clicked
+    receiptWindow.document.getElementById('save-button').addEventListener('click', function() {
+        var blob = new Blob([receipt], { type: 'text/plain' });
+        var url = URL.createObjectURL(blob);
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = 'receipt.txt';
+        link.click();
+    });
+});
+// Function to export table data as CSV
+function exportTableToCSV() {
+    var rows = $('table tbody tr');
+    var csvContent = "Order Number,Hours,Total\n";
+
+    rows.each(function() {
+        var ordernumber = $(this).find('td:eq(0)').text();
+        var hours = $(this).find('td:eq(1)').text();
+        var total = $(this).find('td:eq(2)').text().substr(1);
+        csvContent += ordernumber + "," + hours + "," + total + "\n";
+    });
+
+    // Add total summary
+    csvContent += "Total Orders:," + orderCount + "\n";
+    csvContent += "Total Hours:," + totalHours.toFixed(2) + "\n";
+    csvContent += "Total Money:,$" + totalMoney.toFixed(2) + "\n";
+
+    // Create a Blob with the CSV content
+    var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+
+    // Create a link and trigger the download
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = 'orders.csv';
+    link.click();
+}
+
+// When the Export CSV button is clicked
+$('#export-button').on('click', function() {
+    exportTableToCSV();
+
+    // Clear table and reset counters
+    $('table tbody').empty();
+    activeOrderCount = 0;
+    totalHours = 0;
+    totalMoney = 0;
+    orderCount = 0;
+});
+
 
 			// Update stats every second
 			setInterval(function() {
@@ -153,6 +211,29 @@
 	background-color: #3e8e41;
   }
   
+  pre {
+        white-space: pre-wrap;
+    }
+
+    button#save-button {
+        background-color: #4CAF50;
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+    #export-button {
+        background-color: #d32f2f;
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+
 	</style>
 	</head>
 	<body>
@@ -182,6 +263,8 @@
 					<p>Active Orders: <span id="active-count">0</span></p>
 					<p>Total Money: <span id="total-money">$0.00</span></p>
 					<button id="clear">Clear Order</button>
+                    <button id="export-button">End of the daY</button>
+
 			</section>	</div>
 			
 			<section class="stats">
